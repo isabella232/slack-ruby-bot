@@ -55,8 +55,8 @@ Style/DoubleNegation:
 # Cop supports --auto-correct.
 Style/ExpandPathArguments:
   Exclude:
-    - 'lib/config/application.rb'
-    - 'lib/config/environment.rb'
+    - 'lib/bot_config/application.rb'
+    - 'lib/bot_config/environment.rb'
     - 'lib/slack-ruby-bot.rb'
     - 'slack-ruby-bot.gemspec'
 

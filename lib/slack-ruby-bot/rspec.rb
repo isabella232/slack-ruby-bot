@@ -4,7 +4,7 @@ require 'rubygems'
 require 'rspec'
 require 'rack/test'
 
-require 'config/environment'
+require 'bot_config/environment'
 require 'slack-ruby-bot'
 
 Dir[File.join(File.dirname(__FILE__), 'rspec/support', '**/*.rb')].each do |file|
