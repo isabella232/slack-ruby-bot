@@ -1,5 +1,6 @@
-require File.expand_path('../bot_config/environment', __FILE__)
+# frozen_string_literal: true
 
+require File.expand_path('bot_config/environment', __dir__)
 require 'slack-ruby-bot/version'
 require 'slack-ruby-bot/support/loggable'
 require 'slack-ruby-bot/about'

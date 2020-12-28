@@ -1,6 +1,50 @@
 Upgrading SlackRubyBot
 ======================
 
+### Upgrading to >= 0.16.0
+
+#### Removed GIF support
+
+GIF, Giphy and other animated GIF support has been removed. Remove `gif` options from all `client.say(gif: 'keyword')` method calls, the `GIPHY_API_KEY` ENV var, `gem 'giphy'` or `gem 'GiphyClient'`, and any references to `send_gifs`. The previously deprecated `SlackRubyBot::Commands::Base#send_message`, `send_message_with_gif` and `send_gif` methods have also been removed.
+
+See [#261](https://github.com/slack-ruby/slack-ruby-bot/issues/261) for details.
+
+#### Removed deprecated `server.hooks`
+
+The previously deprecated `SlackRubyBot::Server#hooks` has been removed.
+
+See [#266](https://github.com/slack-ruby/slack-ruby-bot/issues/266) for details.
+
+### Upgrading to >= 0.15.0
+
+#### Set up VCR explicitly
+
+Requiring `slack-ruby-bot/rspec` will no longer set up [VCR](https://rubygems.org/gems/vcr) anymore. If your spec suite implicitly relies on this you would need to set up VCR explicitly in your spec suite. Just follow standard VCR documentation.
+
+See [#258](https://github.com/slack-ruby/slack-ruby-bot/pull/258) for more information.
+
+### Upgrading to >= 0.14.0
+
+#### Bot Messages Disabled
+
+By default bots will no longer respond to other bots. This caused confusing "I don't understand this command." errors when DMing the bot and rendering URLs that were being sent back as DMs. If you wish to restore the old behavior, set `allow_bot_messages` to `true`.
+
+```ruby
+SlackRubyBot.configure do |config|
+  config.allow_bot_messages = true
+end
+```
+
+See [#250](https://github.com/slack-ruby/slack-ruby-bot/pull/250) for more information.
+
+### Upgrading to >= 0.13.0
+
+#### Minimum Ruby Version
+
+Ruby 2.3 or later is now required.
+
+See [#246](https://github.com/slack-ruby/slack-ruby-bot/pull/246) for more information.
+
 ### Upgrading to >= 0.12.0
 
 #### Remove any references to `SlackRubyBot::Server#restart!`

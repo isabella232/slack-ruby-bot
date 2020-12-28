@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'support/match'
 require_relative 'support/help'
 
@@ -12,25 +14,6 @@ module SlackRubyBot
         def inherited(subclass)
           SlackRubyBot::Commands::Base.command_classes ||= []
           SlackRubyBot::Commands::Base.command_classes << subclass
-        end
-
-        def send_message(client, channel, text, options = {})
-          logger.warn '[DEPRECATION] `send_message` is deprecated.  Please use `client.say` instead.'
-          if text && !text.length.empty?
-            client.say(options.merge(channel: channel, text: text))
-          else
-            client.say(options.merge(channel: channel, text: 'Nothing to see here.', gif: 'nothing'))
-          end
-        end
-
-        def send_message_with_gif(client, channel, text, keywords, options = {})
-          logger.warn '[DEPRECATION] `send_message_with_gif` is deprecated.  Please use `client.say` instead.'
-          client.say(options.merge(channel: channel, text: text, gif: keywords))
-        end
-
-        def send_gif(client, channel, keywords, options = {})
-          logger.warn '[DEPRECATION] `send_gif` is deprecated.  Please use `client.say` instead.'
-          client.say(options.merge(channel: channel, text: '', gif: keywords))
         end
 
         def help(&block)
@@ -48,31 +31,37 @@ module SlackRubyBot
 
         def command(*values, &block)
           values = values.map { |value| value.is_a?(Regexp) ? value.source : Regexp.escape(value) }.join('|')
-          match Regexp.new("^#{bot_matcher}[\\s]+(?<command>#{values})([\\s]+(?<expression>.*)|)$", Regexp::IGNORECASE | Regexp::MULTILINE), &block
+          match Regexp.new("^#{bot_matcher}[[:space:]]+(?<command>#{values})([[:space:]]+(?<expression>.*)|)$", Regexp::IGNORECASE | Regexp::MULTILINE), &block
         end
 
         def invoke(client, data)
           finalize_routes!
           expression, text = parse(client, data)
           return false unless expression || data.attachments
+
           routes.each_pair do |route, options|
             match_method = options[:match_method]
             case match_method
             when :match
               next unless expression
+
               match = route.match(expression)
               match ||= route.match(text) if text
               next unless match
               next if match.names.include?('bot') && !client.name?(match['bot'])
+
               match = Support::Match.new(match)
             when :scan
               next unless expression
+
               match = expression.scan(route)
               next unless match.any?
             when :attachment
               next unless data.attachments && !data.attachments.empty?
+
               match, attachment, field = match_attachments(data, route, options[:fields_to_scan])
               next unless match
+
               match = Support::Match.new(match, attachment, field)
             end
             call_command(client, data, match, options[:block])
@@ -122,6 +111,7 @@ module SlackRubyBot
           text = data.text
           return text unless direct_message?(data) && message_from_another_user?(data)
           return text if message_begins_with_bot_mention?(text, client.names)
+
           ["#{client.name} #{text}", text]
         end
 
@@ -139,7 +129,8 @@ module SlackRubyBot
         end
 
         def finalize_routes!
-          return if routes && routes.any?
+          return if routes&.any?
+
           command command_name_from_class
         end
 
@@ -148,6 +139,7 @@ module SlackRubyBot
           data.attachments.each do |attachment|
             fields_to_scan.each do |field|
               next unless attachment[field]
+
               match = route.match(attachment[field])
               return match, attachment, field if match
             end

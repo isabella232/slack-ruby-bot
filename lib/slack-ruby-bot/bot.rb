@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SlackRubyBot
   class Bot < SlackRubyBot::Commands::Base
     delegate :client, to: :instance
@@ -11,7 +13,7 @@ module SlackRubyBot
     end
 
     def self.call(client, data, _match)
-      client.say(channel: data.channel, text: "Sorry <@#{data.user}>, I don't understand that command!", gif: 'understand')
+      client.say(channel: data.channel, text: "Sorry <@#{data.user}>, I don't understand that command!")
     end
   end
 end

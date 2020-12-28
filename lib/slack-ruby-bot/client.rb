@@ -1,13 +1,33 @@
+# frozen_string_literal: true
+
 module SlackRubyBot
   class Client < Slack::RealTime::Client
     include Loggable
     attr_accessor :aliases
-    attr_accessor :send_gifs
+    attr_accessor :allow_bot_messages
+    attr_accessor :allow_message_loops
 
     def initialize(attrs = {})
       super(attrs)
       @aliases = attrs[:aliases]
-      @send_gifs = attrs[:send_gifs]
+      @allow_message_loops = attrs[:allow_message_loops]
+      @allow_bot_messages = attrs[:allow_bot_messages]
+    end
+
+    def allow_message_loops?
+      @allow_message_loops.nil? ? SlackRubyBot::Config.allow_message_loops? : !!@allow_message_loops
+    end
+
+    def allow_bot_messages?
+      @allow_bot_messages.nil? ? SlackRubyBot::Config.allow_bot_messages? : !!@allow_bot_messages
+    end
+
+    def message_to_self?(data)
+      !!(self.self && self.self.id == data.user)
+    end
+
+    def bot_message?(data)
+      data.subtype == 'bot_message'
     end
 
     def names
@@ -29,13 +49,8 @@ module SlackRubyBot
       name && names.include?(name.downcase)
     end
 
-    def send_gifs?
-      return false unless defined?(Giphy)
-      send_gifs.nil? ? SlackRubyBot::Config.send_gifs? : send_gifs
-    end
-
     def name
-      SlackRubyBot.config.user || (self.self && self.self.name)
+      SlackRubyBot.config.user || self.self&.name
     end
 
     def url
@@ -43,21 +58,8 @@ module SlackRubyBot
     end
 
     def say(options = {})
-      options = options.dup
-      # get GIF
-      keywords = options.delete(:gif)
-      # text
-      text = options.delete(:text)
-      if keywords && send_gifs?
-        gif = begin
-          Giphy.random(keywords)
-        rescue StandardError => e
-          logger.warn "Giphy.random: #{e.message}"
-          nil
-        end
-      end
-      text = [text, gif && gif.image_url.to_s].compact.join("\n")
-      message({ text: text }.merge(options))
+      logger.warn '[DEPRECATION] `gif:` is deprecated and has no effect.' if options.key?(:gif)
+      message({ text: '' }.merge(options))
     end
   end
 end

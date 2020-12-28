@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 module SlackRubyBot
   class Server
     include Loggable
 
-    attr_accessor :token, :aliases, :send_gifs
+    attr_accessor :token, :aliases
 
     include SlackRubyBot::Hooks::HookSupport
 
@@ -11,7 +13,6 @@ module SlackRubyBot
     def initialize(options = {})
       @token = options[:token]
       @aliases = options[:aliases]
-      @send_gifs = options[:send_gifs]
 
       # Hook Handling
       flush_hook_blocks
@@ -55,7 +56,7 @@ module SlackRubyBot
       else
         raise e
       end
-    rescue Faraday::Error::TimeoutError, Faraday::Error::ConnectionFailed, Faraday::Error::SSLError => e
+    rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Faraday::SSLError => e
       logger.error e
       sleep 1 # ignore, try again
     rescue StandardError => e
@@ -77,7 +78,7 @@ module SlackRubyBot
 
     def client
       @client ||= begin
-        client = SlackRubyBot::Client.new(aliases: aliases, send_gifs: send_gifs, token: token)
+        client = SlackRubyBot::Client.new(aliases: aliases, token: token)
         _hooks.client = client
 
         client

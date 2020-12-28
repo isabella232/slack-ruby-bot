@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SlackRubyBot
   module Hooks
     module HookSupport
@@ -14,12 +16,6 @@ module SlackRubyBot
           self.hook_blocks[event_name] ||= []
           self.hook_blocks[event_name] << block
         end
-      end
-
-      # Instance stuff
-      def hooks
-        warn Kernel.caller.first + ' [DEPRECATION] `hooks` method is deprecated. Please use `server.on` instead to register a hook.'
-        _hooks
       end
 
       def on(event_name, handler)

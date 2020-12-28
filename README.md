@@ -5,11 +5,62 @@ Slack-Ruby-Bot
 [![Build Status](https://travis-ci.org/slack-ruby/slack-ruby-bot.svg)](https://travis-ci.org/slack-ruby/slack-ruby-bot)
 [![Code Climate](https://codeclimate.com/github/slack-ruby/slack-ruby-bot/badges/gpa.svg)](https://codeclimate.com/github/slack-ruby/slack-ruby-bot)
 
-A generic Slack bot framework written in Ruby on top of [slack-ruby-client](https://github.com/slack-ruby/slack-ruby-client). This library does all the heavy lifting, such as message parsing, so you can focus on implementing slack bot commands. It also attempts to introduce the bare minimum number of requirements or any sorts of limitations. It's a Slack bot boilerplate.
+---
+
+**Warning**: As of December 4th, 2020 Slack no longer accept resubmissions from apps that are not using granular permissions, or so-called "classic apps". On November 18, 2021 Slack will start delisting apps that have not migrated to use granular permissions. This library implements legacy, real-time support for classic apps. You should not be building a new bot with it and use [slack-ruby-bot-server-events](https://github.com/slack-ruby/slack-ruby-bot-server-events) instead. For a rudimentary bot you can even start with [slack-ruby-bot-server-events-app-mentions](https://github.com/slack-ruby/slack-ruby-bot-server-events-app-mentions). See [MIGRATION](MIGRATION.md) for migration help.
+
+---
+
+The slack-ruby-bot library is a generic Slack bot framework written in Ruby on top of [slack-ruby-client](https://github.com/slack-ruby/slack-ruby-client). This library does all the heavy lifting, such as message parsing, so you can focus on implementing slack bot commands. It also attempts to introduce the bare minimum number of requirements or any sorts of limitations. It's a Slack bot boilerplate.
 
 If you are not familiar with Slack bots or Slack API concepts, you might want to watch [this video](http://code.dblock.org/2016/03/11/your-first-slack-bot-service-video.html).
 
 ![](slack.png)
+
+# Table of Contents
+
+- [Useful to Me?](#useful-to-me)
+- [Stable Release](#stable-release)
+- [Usage](#usage)
+  - [A Minimal Bot](#a-minimal-bot)
+    - [Gemfile](#gemfile)
+    - [pongbot.rb](#pongbotrb)
+  - [A Production Bot](#a-production-bot)
+  - [More Involved Examples](#more-involved-examples)
+  - [Commands and Operators](#commands-and-operators)
+  - [Threaded Messages](#threaded-messages)
+  - [Bot Aliases](#bot-aliases)
+  - [Generic Routing](#generic-routing)
+  - [Matching text in message attachments](#matching-text-in-message-attachments)
+  - [Providing description for your bot and commands](#providing-description-for-your-bot-and-commands)
+  - [Customize your command help output](#customize-your-command-help-output)
+  - [SlackRubyBot::Commands::Base](#slackrubybotcommandsbase)
+  - [Authorization](#authorization)
+  - [Built-In Commands](#built-in-commands)
+    - [[bot name]](#bot-name)
+    - [[bot name] hi](#bot-name-hi)
+    - [[bot name] help](#bot-name-help)
+  - [Hooks](#hooks)
+    - [Implementing and registering a Hook Handler](#implementing-and-registering-a-hook-handler)
+      - [Hooks registration on SlackRubyBot::Server initialization](#hooks-registration-on-slackrubybotserver-initialization)
+      - [Hooks registration on a SlackRubyBot::Server instance](#hooks-registration-on-a-slackrubybotserver-instance)
+      - [Hooks registration on SlackRubyBot::Server class](#hooks-registration-on-slackrubybotserver-class)
+  - [Bot Message Protection](#bot-message-protection)
+  - [Message Loop Protection](#message-loop-protection)
+  - [Logging](#logging)
+  - [Advanced Integration](#advanced-integration)
+  - [Proxy Configuration](#proxy-configuration)
+  - [Model-View-Controller Design](#model-view-controller-design)
+    - [Controller](#controller)
+    - [Model](#model)
+    - [View](#view)
+  - [Testing](#testing)
+    - [RSpec Shared Behaviors](#rspec-shared-behaviors)
+    - [Testing Lower Level Messages](#testing-lower-level-messages)
+  - [Useful Libraries](#useful-libraries)
+- [Contributing](#contributing)
+- [Upgrading](#upgrading)
+- [Copyright and License](#copyright-and-license)
 
 ## Useful to Me?
 
@@ -20,7 +71,7 @@ If you are not familiar with Slack bots or Slack API concepts, you might want to
 ## Stable Release
 
 You're reading the documentation for the **next** release of slack-ruby-bot.
-Please see the documentation for the [last stable release, v0.11.2](https://github.com/slack-ruby/slack-ruby-bot/tree/v0.11.2) unless you're integrating with HEAD.
+Please see the documentation for the [last stable release, v0.16.1](https://github.com/slack-ruby/slack-ruby-bot/tree/v0.16.1) unless you're integrating with HEAD.
 See [CHANGELOG](CHANGELOG.md) for a history of changes and [UPGRADING](UPGRADING.md) for how to upgrade to more recent versions.
 
 ## Usage
@@ -33,7 +84,7 @@ See [CHANGELOG](CHANGELOG.md) for a history of changes and [UPGRADING](UPGRADING
 source 'https://rubygems.org'
 
 gem 'slack-ruby-bot'
-gem 'async-websocket'
+gem 'async-websocket', '~>0.8.0'
 ```
 
 #### pongbot.rb
@@ -141,8 +192,6 @@ SlackRubyBot.configure do |config|
   config.aliases = [':pong:', 'pongbot']
 end
 ```
-
-This is particularly fun with emoji.
 
 ![](screenshots/aliases.gif)
 
@@ -270,7 +319,7 @@ class Market < SlackRubyBot::Bot
   command 'help' do |client, data, match|
     user_command = match[:expression]
     help_attrs = SlackRubyBot::Commands::Support::Help.instance.find_command_help_attrs(user_command)
-    client.say(channel: data.channel, text: "#{help_attrs.command_desc}\n\n#{help_attrs.command_long_desc}"
+    client.say(channel: data.channel, text: "#{help_attrs.command_desc}\n\n#{help_attrs.command_long_desc}")
   end
 end
 ```
@@ -321,47 +370,6 @@ class AuthorizedBot < SlackRubyBot::Commands::Base
 end
 ```
 
-### Animated GIFs
-
-The `SlackRubyBot::Client` implementation comes with GIF support. To enable it add `gem GiphyClient` (official Giphy SDK) or `gem giphy` (older SDK, deprecated) to your **Gemfile** and set a Giphy key via `ENV['GIPHY_API_KEY']`. Obtain one from [developers.giphy.com](https://developers.giphy.com).
-
-**Note:** Bots send animated GIFs in default commands and errors.
-
-```ruby
-class Phone < SlackRubyBot::Commands::Base
-  command 'call'
-
-  def self.call(client, data, match)
-    client.say(channel: data.channel, text: 'called', gif: 'phone')
-    # Sends the text 'called' and a random GIF that matches the keyword 'phone'.
-  end
-end
-```
-
-Giphy API key is set automatically via `ENV['GIPHY_API_KEY']`. You can override this manually.
-
-```ruby
-Giphy.configure do |config|
-  config.api_key = 'key'
-end
-```
-
-With `GiphyClient` you can configure the default GIF rating, which supports Y, G, PG, PG-13, and R. The default value is `G`.
-
-```ruby
-Giphy.configure do |config|
-  config.rating = 'Y' # illustrated content only, i.e. cartoons
-end
-```
-
-If you use giphy for something else but don't want your bots to send GIFs you can set `ENV['SLACK_RUBY_BOT_SEND_GIFS']` or `SlackRubyBot::Config.send_gifs` to `false`. The latter takes precedence.
-
-```ruby
-SlackRubyBot.configure do |config|
-  config.send_gifs = false
-end
-```
-
 ### Built-In Commands
 
 Slack-ruby-bot comes with several built-in commands. You can re-define built-in commands, normally, as described above.
@@ -382,7 +390,7 @@ Get help.
 
 Hooks are event handlers and respond to Slack RTM API [events](https://api.slack.com/events), such as [hello](lib/slack-ruby-bot/hooks/hello.rb) or [message](lib/slack-ruby-bot/hooks/message.rb). You can implement your own in a couple of ways:
 
-#### Implement and register a Hook Handler
+#### Implementing and registering a Hook Handler
 
 A Hook Handler is any object that respond to a `call` message, like a proc, instance of an object, class with a `call` class method, etc.
 
@@ -459,22 +467,19 @@ These will get pushed into the hook set on initialization.
 
 Either by configuration, explicit assignment or hook blocks, multiple handlers can exist for the same event type.
 
+### Bot Message Protection
 
-#### Deprecated hook registration
-
-Registering a hook method using `hooks.add` is considered deprecated and
-will be removed on future versions.
+By default bots do not respond to self or other bots. If you wish to change that behavior globally, set `allow_bot_messages` to `true`.
 
 ```ruby
-# [DEPRECATED]
-server.hooks.add(:hello, MyBot::Hooks::UserChange.new)
-server.hooks.add(:hello, ->(client, data) { puts "Hello!" })
-
+SlackRubyBot.configure do |config|
+  config.allow_bot_messages = true
+end
 ```
 
 ### Message Loop Protection
 
-By default bots do not respond to their own messages. If you wish to change that behavior, set `allow_message_loops` to `true`.
+By default bots do not respond to their own messages. If you wish to change that behavior globally, set `allow_message_loops` to `true`.
 
 ```ruby
 SlackRubyBot.configure do |config|
@@ -502,14 +507,14 @@ end
 
 ### Advanced Integration
 
-You may want to integrate a bot or multiple bots into other systems, in which case a globally configured bot may not work for you. You may create instances of [SlackRubyBot::Server](lib/slack-ruby-bot/server.rb) which accepts `token`, `aliases` and `send_gifs`.
+You may want to integrate a bot or multiple bots into other systems, in which case a globally configured bot may not work for you. You may create instances of [SlackRubyBot::Server](lib/slack-ruby-bot/server.rb) which accepts `token` and `aliases`.
 
 ```ruby
 EM.run do
   bot1 = SlackRubyBot::Server.new(token: token1, aliases: ['bot1'])
   bot1.start_async
 
-  bot2 = SlackRubyBot::Server.new(token: token2, send_gifs: false, aliases: ['bot2'])
+  bot2 = SlackRubyBot::Server.new(token: token2, aliases: ['bot2'])
   bot2.start_async
 end
 ```
@@ -626,7 +631,7 @@ class MyView < SlackRubyBot::MVC::View::Base
 
   def react_thumbsup
     client.web_client.reactions_add(
-      name: :thumbs_up,
+      name: :thumbsup,
       channel: data.channel,
       timestamp: data.ts,
       as_user: true)
@@ -634,7 +639,7 @@ class MyView < SlackRubyBot::MVC::View::Base
 
   def react_thumbsdown
     client.web_client.reactions_remove(
-      name: :thumbs_up,
+      name: :thumbsup,
       channel: data.channel,
       timestamp: data.ts,
       as_user: true)
@@ -653,14 +658,17 @@ Again, the View will have access to the most up to date `client`, `data`, and `m
 
 View methods are not matched to routes, so there is no restriction on how to name methods as there is in Controllers.
 
-### RSpec Shared Behaviors
+### Testing
 
-Slack-ruby-bot ships with a number of shared RSpec behaviors that can be used in your RSpec tests.
+#### RSpec Shared Behaviors
+
+Slack-ruby-bot comes with a number of shared RSpec behaviors that can be used in your RSpec tests.
 
 * [behaves like a slack bot](lib/slack-ruby-bot/rspec/support/slack-ruby-bot/it_behaves_like_a_slack_bot.rb): A bot quacks like a Slack Ruby bot.
 * [respond with slack message](lib/slack-ruby-bot/rspec/support/slack-ruby-bot/respond_with_slack_message.rb): The bot responds with a message.
 * [respond with slack messages](lib/slack-ruby-bot/rspec/support/slack-ruby-bot/respond_with_slack_messages.rb): The bot responds with a multiple messages.
 * [respond with error](lib/slack-ruby-bot/rspec/support/slack-ruby-bot/respond_with_error.rb): An exception is raised inside a bot command.
+* [start typing](lib/slack-ruby-bot/rspec/support/slack-ruby-bot/start_typing.rb): The bot calls `client.start_typing`.
 
 Require `slack-ruby-bot/rspec` in your `spec_helper.rb` along with the following dependencies in Gemfile.
 
@@ -670,6 +678,72 @@ group :development, :test do
   gem 'rspec'
   gem 'vcr'
   gem 'webmock'
+end
+```
+
+Use the `respond_with_slack_message` matcher.
+
+```ruby
+describe SlackRubyBot::Commands do
+  it 'responds with any message' do
+    expect(message: "#{SlackRubyBot.config.user} hi").to respond_with_slack_message
+  end
+  it 'says hi' do
+    expect(message: "#{SlackRubyBot.config.user} hi").to respond_with_slack_message('hi')
+  end
+end
+```
+
+Use the `respond_with_slack_messages` matcher for multiple messages.
+
+```ruby
+describe SlackRubyBot::Commands do
+  it 'responds with more than one message' do
+    expect(message: "#{SlackRubyBot.config.user} count").to respond_with_slack_messages
+  end
+  it 'says one and two' do
+    expect(message: "#{SlackRubyBot.config.user} count").to respond_with_slack_messages(['one', 'two'])
+  end
+end
+```
+
+Message matchers support regular expressions.
+
+```ruby
+describe SlackRubyBot::Commands do
+  it 'says hi' do
+    expect(message: "#{SlackRubyBot.config.user} hi").to respond_with_slack_message(/hi/)
+  end
+end
+```
+
+Check that the bot called `client.start_typing(channel: 'channel')`.
+
+```ruby
+describe SlackRubyBot::Commands do
+ it 'starts typing on channel' do
+    expect(message: "#{SlackRubyBot.config.user} hi").to start_typing(channel: 'channel')
+  end
+end
+```
+
+#### Testing Lower Level Messages
+
+You can test client behavior at a lower level by fetching the message hook. The following example expects a bot command to call `client.typing(channel: data.channel)`.
+
+```ruby
+describe SlackRubyBot::Commands do
+  let(:app) { Server.new }
+  let(:client) { app.send(:client) }
+  let(:message_hook) { SlackRubyBot::Hooks::Message.new }
+  it 'receives a typing event' do
+      expect(client).to receive(:typing)
+      message_hook.call(
+        client,
+        Hashie::Mash.new(text: "#{SlackRubyBot.config.user} type something", channel: 'channel')
+      )
+    end
+  end
 end
 ```
 
@@ -687,6 +761,6 @@ See [CHANGELOG](CHANGELOG.md) for a history of changes and [UPGRADING](UPGRADING
 
 ## Copyright and License
 
-Copyright (c) 2015-2016, [Daniel Doubrovkine](https://twitter.com/dblockdotorg), [Artsy](https://www.artsy.net) and [Contributors](CHANGELOG.md).
+Copyright (c) 2015-2020, [Daniel Doubrovkine](https://twitter.com/dblockdotorg), [Artsy](https://www.artsy.net) and [Contributors](CHANGELOG.md).
 
 This project is licensed under the [MIT License](LICENSE.md).
